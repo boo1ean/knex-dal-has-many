@@ -43,7 +43,7 @@ module.exports = dal({
 });
 ```
 
-Allow to store hierarchical data with one function call
+Allows to store hierarchical data with one function call:
 
 ```javascript
 var gridsDal = require('./grids/dal');
