@@ -36,10 +36,6 @@ module.exports = dal({
 			}
 		})
 	],
-	defaults: {
-		create: { created_at: 'now', updated_at: 'now' },
-		update: { updated_at: 'now' }
-	},
 	pick: {
 		create: createAndUpdateFields,
 		update: createAndUpdateFields
