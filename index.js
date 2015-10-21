@@ -6,9 +6,9 @@ var methodBuilders = {
 	create: function buildCreateWithChildren (childDal, childrenPropertyName, childForeignKeyColumnName) {
 		return function createWithChildren (params) {
 			return this.create(params)
-				.tap(createOrUpdateItems);
+				.tap(createItems);
 
-			function createOrUpdateItems (parentId) {
+			function createItems (parentId) {
 				return Promise.map(
 					params[childrenPropertyName].map(attachReference),
 					childDal.create
@@ -31,12 +31,20 @@ var methodBuilders = {
 			function createOrUpdateItems (parentId) {
 				return Promise.map(
 					params[childrenPropertyName].map(attachReference),
-					childDal.createOrUpdate
+					createOrUpdate
 				);
 
 				function attachReference (item) {
 					item[childForeignKeyColumnName] = parentId;
 					return item;
+				}
+
+				function createOrUpdate (params) {
+					if (params.id) {
+						return childDal.update(params);
+					}
+
+					return childDal.create(params);
 				}
 			}
 
