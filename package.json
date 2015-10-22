@@ -6,8 +6,18 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [
+    "knex",
+    "database",
+    "db",
+    "dal",
+    "model",
+    'has-many',
+    'knex-dal'
+  ],
   "author": "Egor Gumenyuk <boo1ean0807@gmail.com>",
   "license": "ISC",
+
   "dependencies": {
     "bluebird": "^2.10.2"
   }
