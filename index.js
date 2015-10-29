@@ -25,17 +25,34 @@ var methodBuilders = {
 
 	update: function buildUpdateWithChildren (childDal, childrenPropertyName, childForeignKeyColumnName) {
 		return function createWithChildren (params) {
-			return this.update(params)
-				.tap(createOrUpdateItems);
+			var knex = this.knex;
 
-			function createOrUpdateItems (parentId) {
+			return this.update(params)
+				.then(findMissingItems)
+				.then(removeMissingItems)
+				.then(createOrUpdateItems)
+				.return(params.id);
+
+			function findMissingItems () {
+				var childrenIds = _.pluck(params[childrenPropertyName], 'id').filter(Boolean);
+				return knex(childDal.meta.table)
+					.where(childForeignKeyColumnName, params.id)
+					.whereNotIn('id', childrenIds)
+					.select('id');
+			}
+
+			function removeMissingItems (missingItemsIds) {
+				return Promise.all(missingItemsIds.map(childDal.remove));
+			}
+
+			function createOrUpdateItems () {
 				return Promise.map(
 					params[childrenPropertyName].map(attachReference),
 					createOrUpdate
 				);
 
 				function attachReference (item) {
-					item[childForeignKeyColumnName] = parentId;
+					item[childForeignKeyColumnName] = params.id;
 					return item;
 				}
 
@@ -47,7 +64,6 @@ var methodBuilders = {
 					return childDal.create(params);
 				}
 			}
-
 		}
 	}
 }
