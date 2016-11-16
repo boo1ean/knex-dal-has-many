@@ -34,7 +34,7 @@ var methodBuilders = {
 				.return(params.id);
 
 			function findMissingItems () {
-				var childrenIds = _.pluck(params[childrenPropertyName], 'id').filter(Boolean);
+				var childrenIds = _.map(params[childrenPropertyName], 'id').filter(Boolean);
 				return knex(childDal.meta.table)
 					.where(childForeignKeyColumnName, params.id)
 					.whereNotIn('id', childrenIds)
