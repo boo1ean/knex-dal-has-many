@@ -20,5 +20,8 @@
   "dependencies": {
     "bluebird": "^2.10.2",
     "lodash": "^4.17.2"
+  },
+  "devDependencies": {
+    "tape": "^4.6.2"
   }
 }
