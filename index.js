@@ -3,19 +3,25 @@ var assert = require('assert');
 var Promise = require('bluebird');
 
 var methodBuilders = {
-	create: function buildCreateWithChildren (childDal, childrenPropertyName, childForeignKeyColumnName) {
+	create: function buildCreateWithChildren (relations) {
 		return function createWithChildren (params) {
 			return this.create(params)
 				.tap(createItems);
 
 			function createItems (parentId) {
-				return Promise.map(
-					params[childrenPropertyName].map(attachReference),
-					childDal.create
-				);
+				return Promise.map(relations, createRelationItems)
+
+				function createRelationItems (relation) {
+					if (_.isArray(params[relation.field])) {
+						return Promise.map(
+							params[relation.field].map(attachReference),
+							relation.methods.create
+						);
+					}
+				}
 
 				function attachReference (item) {
-					item[childForeignKeyColumnName] = parentId;
+					item[relation.foreignKey] = parentId;
 					return item;
 				}
 			}
@@ -23,64 +29,80 @@ var methodBuilders = {
 		}
 	},
 
-	update: function buildUpdateWithChildren (childDal, childrenPropertyName, childForeignKeyColumnName) {
+	update: function buildUpdateWithChildren (relations) {
 		return function createWithChildren (params) {
 			var knex = this.knex;
 
 			return this.update(params)
-				.then(findMissingItems)
-				.then(removeMissingItems)
-				.then(createOrUpdateItems)
+				.then(processItems)
 				.return(params.id);
 
-			function findMissingItems () {
-				var childrenIds = _.map(params[childrenPropertyName], 'id').filter(Boolean);
-				return knex(childDal.meta.table)
-					.where(childForeignKeyColumnName, params.id)
-					.whereNotIn('id', childrenIds)
-					.select('id');
-			}
-
-			function removeMissingItems (missingItemsIds) {
-				return Promise.all(missingItemsIds.map(childDal.remove));
-			}
-
-			function createOrUpdateItems () {
-				return Promise.map(
-					params[childrenPropertyName].map(attachReference),
-					createOrUpdate
-				);
-
-				function attachReference (item) {
-					item[childForeignKeyColumnName] = params.id;
-					return item;
-				}
-
-				function createOrUpdate (params) {
-					if (params.id) {
-						return childDal.update(params);
+			function processItems () {
+				return Promise.map(relations, function (relation) {
+					if (_.isArray(params[relation.field])) {
+						return findMissingItems()
+							.then(removeMissingItems)
 					}
 
-					return childDal.create(params);
-				}
+					function findMissingItems () {
+						var childrenIds = _.map(params[relation.field], 'id');
+						return knex(relation.table)
+							.where(relation.foreignKey, params.id)
+							.whereNotIn('id', childrenIds)
+							.select('id')
+					}
+
+					function removeMissingItems (missingItemsIds) {
+						return Promise.map(missingItemsIds, relation.methods.remove);
+					}
+
+					function createOrUpdateItems () {
+						return Promise.map(
+							params[relation.field].map(attachReference),
+							createOrUpdate
+						);
+
+						function attachReference (item) {
+							item[relation.field] = params.id;
+							return item;
+						}
+
+						function createOrUpdate (params) {
+							if (params.id) {
+								return relation.methods.update(params);
+							}
+
+							return relation.methods.create(params);
+						}
+					}
+				});
 			}
 		}
 	}
 }
 
 function createMethods (opts) {
-	assert(opts.childDal, 'Child DAL is required for configuring hasMany relation');
-	assert(opts.property, 'property name is required to configure hasMany relation');
-	assert(opts.childForeignKey, 'childForeignKey is required to configure hasMany relation');
 	assert(opts.methods || _.isEmpty(opts.methods), 'Configuring hasMany relation without methods does not make sense');
+	assert(opts.relations && _.isArray(opts.relations), 'relations must be array')
+	opts.relations.forEach(validateRelation);
 
 	var methods = {};
 
 	for (var methodName in opts.methods) {
-		methods[methodName] = methodBuilders[opts.methods[methodName]](opts.childDal, opts.property, opts.childForeignKey);
+		methods[opts.methods[methodName]] = methodBuilders[methodName](opts.relations);
 	}
 
 	return methods;
+}
+
+function validateRelation (opts) {
+	assert(opts.table, 'child table name is required to configure has-many relationn');
+	assert(opts.field, 'property name is required to to configure has-many relation');
+	assert(opts.foreignKey, 'childForeignKey is required to configure has-many relation');
+	assert(opts.methods, 'child methods map is required to configure has-many relation');
+	assert(opts.methods.remove, 'remove child method is required to configure has-many relation');
+	assert(opts.methods.create, 'create child method is required to configure has-many relation');
+	assert(opts.methods.update, 'update child method is required to configure has-many relation');
 }
 
 module.exports = createMethods;

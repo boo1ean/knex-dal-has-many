@@ -27,13 +27,20 @@ module.exports = dal({
 	softDeleteColumn: softDeleteColumn,
 	mixins: [
 		hasMany({
-			childDal: itemsDal,
-			childForeignKey: 'grid_id',
-			property: 'items',
 			methods: {
-				createWithItems: 'create',
-				updateWithItems: 'update'
-			}
+				create: 'createWithItems',
+				update: 'updateWithItems',
+			},
+			relations: [{
+				table: 'items',
+				foreignKey: 'grid_id',
+				field: 'items',
+				methods: {
+					create: itemsDal.create.bind(itemsDal),
+					update: itemsDal.update.bind(itemsDal),
+					remove: itemsDal.remove.bind(itemsDal)
+				}
+			}]
 		})
 	],
 	pick: {
