@@ -18,12 +18,13 @@ var methodBuilders = {
 							relation.methods.create
 						);
 					}
+
+					function attachReference (item) {
+						item[relation.foreignKey] = parentId;
+						return item;
+					}
 				}
 
-				function attachReference (item) {
-					item[relation.foreignKey] = parentId;
-					return item;
-				}
 			}
 
 		}
@@ -42,6 +43,7 @@ var methodBuilders = {
 					if (_.isArray(params[relation.field])) {
 						return findMissingItems()
 							.then(removeMissingItems)
+							.then(createOrUpdateItems);
 					}
 
 					function findMissingItems () {
@@ -63,7 +65,7 @@ var methodBuilders = {
 						);
 
 						function attachReference (item) {
-							item[relation.field] = params.id;
+							item[relation.foreignKey] = params.id;
 							return item;
 						}
 
