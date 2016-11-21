@@ -1,6 +1,6 @@
 {
   "name": "knex-dal-has-many",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "has-many relation mixin for knex-dal",
   "main": "index.js",
   "scripts": {

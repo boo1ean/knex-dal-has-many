@@ -47,7 +47,7 @@ var methodBuilders = {
 					}
 
 					function findMissingItems () {
-						var childrenIds = _.map(params[relation.field], 'id');
+						var childrenIds = _.map(params[relation.field], 'id').filter(Boolean);
 						return knex(relation.table)
 							.where(relation.foreignKey, params.id)
 							.whereNotIn('id', childrenIds)
